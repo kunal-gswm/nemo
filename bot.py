@@ -25,7 +25,8 @@ from telegram.ext import (
     MessageHandler,
     filters,
 )
-from aiohttp import web
+import threading
+from http.server import BaseHTTPRequestHandler, HTTPServer
 
 import config
 from chatgpt_client import ChatGPTClient, ChatGPTError, SessionExpiredError
@@ -247,30 +248,32 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         )
 
 
-async def handle_health_check(request):
-    """Dummy health check endpoint for Render."""
-    return web.Response(text="Bot is running!")
+class HealthCheckHandler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        self.send_response(200)
+        self.send_header('Content-type', 'text/plain')
+        self.end_headers()
+        self.wfile.write(b"Bot is running!")
 
-async def start_web_server():
-    """Start a dummy aiohttp server to satisfy Render's port binding requirement."""
+def start_dummy_server_thread():
+    """Start a lightweight HTTP server in a background thread for Render."""
     port_str = os.environ.get("PORT")
     if not port_str:
         logger.info("No PORT environment variable found. Skipping dummy web server (local mode).")
         return
         
-    app = web.Application()
-    app.router.add_get('/', handle_health_check)
-    runner = web.AppRunner(app)
-    await runner.setup()
     port = int(port_str)
     
-    try:
-        site = web.TCPSite(runner, '0.0.0.0', port)
-        await site.start()
-        logger.info(f"Dummy web server listening on port {port} for Render health checks.")
-    except OSError as e:
-        logger.warning(f"Could not bind to port {port} for dummy web server: {e}")
+    def run_server():
+        try:
+            server = HTTPServer(('0.0.0.0', port), HealthCheckHandler)
+            logger.info(f"Dummy web server listening on port {port} for Render health checks.")
+            server.serve_forever()
+        except Exception as e:
+            logger.error(f"Failed to start dummy web server: {e}")
 
+    thread = threading.Thread(target=run_server, daemon=True)
+    thread.start()
 
 # ── Entrypoint ─────────────────────────────────────────────────────
 
@@ -284,9 +287,6 @@ async def post_init(application) -> None:
     """
     global chatgpt_client
 
-    # Start the dummy web server IMMEDIATELY so Render detects the open port
-    await start_web_server()
-
     token = await load_token()
     
     chatgpt_client = ChatGPTClient(session_token=token)
@@ -297,6 +297,9 @@ async def post_init(application) -> None:
 def main() -> None:
     """Build and run the Telegram bot application."""
     logger.info("Starting ChatGPT Telegram Bot…")
+    
+    # Start health check server FIRST so Render immediately detects the open port
+    start_dummy_server_thread()
 
     app = (
         ApplicationBuilder()

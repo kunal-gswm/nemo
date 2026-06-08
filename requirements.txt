@@ -3,4 +3,4 @@ python-dotenv>=1.0.0
 aiofiles>=23.0
 undetected-chromedriver
 selenium
-aiohttp
+
