@@ -103,11 +103,17 @@ class ChatGPTClient:
             logger.info("Session connected and logged in.")
         except TimeoutException:
             url = self._driver.current_url.lower()
+            try:
+                self._driver.save_screenshot("error_screenshot.png")
+                logger.info("Saved error_screenshot.png for debugging.")
+            except Exception as e:
+                logger.error(f"Failed to save screenshot: {e}")
+                
             if "login" in url:
                 raise SessionExpiredError("Session token appears to be invalid or expired. Redirected to login.")
             else:
-                logger.warning("Could not find prompt textarea. UI changed or Cloudflare block.")
-                raise ChatGPTError("Failed to load ChatGPT interface.")
+                logger.warning(f"Could not find prompt textarea. URL: {url}")
+                raise ChatGPTError("Failed to load ChatGPT interface. Screenshot saved.")
 
     async def connect(self) -> None:
         """Launch the browser and navigate to ChatGPT."""

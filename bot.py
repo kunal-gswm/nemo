@@ -26,6 +26,21 @@ logger = logging.getLogger(__name__)
 # Start dummy server IMMEDIATELY before importing anything else
 class HealthCheckHandler(BaseHTTPRequestHandler):
     def do_GET(self):
+        if self.path == '/debug':
+            try:
+                with open("error_screenshot.png", "rb") as f:
+                    content = f.read()
+                self.send_response(200)
+                self.send_header('Content-type', 'image/png')
+                self.end_headers()
+                self.wfile.write(content)
+            except FileNotFoundError:
+                self.send_response(404)
+                self.send_header('Content-type', 'text/plain')
+                self.end_headers()
+                self.wfile.write(b"No screenshot available.")
+            return
+
         self.send_response(200)
         self.send_header('Content-type', 'text/plain')
         self.end_headers()
