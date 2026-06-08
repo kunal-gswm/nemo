@@ -13,6 +13,9 @@ import os
 import threading
 from http.server import BaseHTTPRequestHandler, HTTPServer
 import logging
+import sys
+
+print("=== BOT SCRIPT STARTED ===", flush=True)
 
 logging.basicConfig(
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",

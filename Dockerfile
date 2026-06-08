@@ -26,4 +26,4 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 
 # Run the bot with Xvfb so undetected-chromedriver can run visibly without a real display
-CMD ["xvfb-run", "-a", "-e", "/dev/stdout", "--server-args=-screen 0 1280x720x24", "python", "bot.py"]
+CMD ["xvfb-run", "-a", "-e", "/dev/stdout", "--server-args=-screen 0 1280x720x24", "python", "-u", "bot.py"]
