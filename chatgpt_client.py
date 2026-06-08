@@ -68,8 +68,13 @@ class ChatGPTClient:
             self._driver = uc.Chrome(options=options)
         
         # We need to navigate to the domain first to set cookies
-        self._driver.get("https://chatgpt.com/404")
+        self._driver.set_page_load_timeout(30)
         
+        try:
+            self._driver.get("https://chatgpt.com/404")
+        except TimeoutException:
+            pass # We don't care if the 404 page times out, we just need the domain
+            
         # Inject the auth cookie
         token = self._session_token.strip()
         chunk_size = 3933
@@ -93,7 +98,10 @@ class ChatGPTClient:
                 
         # Now go to the actual page
         logger.info("Navigating to chatgpt.com...")
-        self._driver.get("https://chatgpt.com/")
+        try:
+            self._driver.get("https://chatgpt.com/")
+        except TimeoutException:
+            logger.warning("driver.get() timed out. Page might be infinitely loading.")
         
         # Check for login
         try:
