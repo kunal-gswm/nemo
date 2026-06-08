@@ -12,8 +12,9 @@ import logging
 import platform
 import signal
 import sys
+import os
 import time
-from typing import Dict
+from typing import Dict, Optional
 
 from telegram import Update
 from telegram.constants import ChatAction
@@ -24,6 +25,7 @@ from telegram.ext import (
     MessageHandler,
     filters,
 )
+from aiohttp import web
 
 import config
 from chatgpt_client import ChatGPTClient, ChatGPTError, SessionExpiredError
@@ -245,6 +247,22 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         )
 
 
+async def handle_health_check(request):
+    """Dummy health check endpoint for Render."""
+    return web.Response(text="Bot is running!")
+
+async def start_web_server():
+    """Start a dummy aiohttp server to satisfy Render's port binding requirement."""
+    app = web.Application()
+    app.router.add_get('/', handle_health_check)
+    runner = web.AppRunner(app)
+    await runner.setup()
+    port = int(os.environ.get("PORT", 8080))
+    site = web.TCPSite(runner, '0.0.0.0', port)
+    await site.start()
+    logger.info(f"Dummy web server listening on port {port} for Render health checks.")
+
+
 # ── Entrypoint ─────────────────────────────────────────────────────
 
 async def post_init(application) -> None:
@@ -262,6 +280,9 @@ async def post_init(application) -> None:
     chatgpt_client = ChatGPTClient(session_token=token)
     await chatgpt_client.connect()
     logger.info("ChatGPT client ready.")
+    
+    # Start the dummy web server for Render
+    await start_web_server()
 
 
 def main() -> None:

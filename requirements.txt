@@ -1,4 +1,6 @@
 python-telegram-bot>=20.0
 python-dotenv>=1.0.0
 aiofiles>=23.0
-playwright
+undetected-chromedriver
+selenium
+aiohttp
