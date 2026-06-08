@@ -9,10 +9,51 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import os
+import threading
+from http.server import BaseHTTPRequestHandler, HTTPServer
+import logging
+
+logging.basicConfig(
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+    level=logging.INFO,
+)
+logger = logging.getLogger(__name__)
+
+# Start dummy server IMMEDIATELY before importing anything else
+class HealthCheckHandler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        self.send_response(200)
+        self.send_header('Content-type', 'text/plain')
+        self.end_headers()
+        self.wfile.write(b"Bot is running!")
+
+def start_dummy_server_thread():
+    port_str = os.environ.get("PORT")
+    if not port_str:
+        logger.info("No PORT environment variable found. Skipping dummy web server (local mode).")
+        return
+        
+    port = int(port_str)
+    
+    def run_server():
+        try:
+            server = HTTPServer(('0.0.0.0', port), HealthCheckHandler)
+            logger.info(f"Dummy web server listening on port {port} for Render health checks.")
+            server.serve_forever()
+        except Exception as e:
+            logger.error(f"Failed to start dummy web server: {e}")
+
+    thread = threading.Thread(target=run_server, daemon=True)
+    thread.start()
+
+start_dummy_server_thread()
+
+import asyncio
+import json
 import platform
 import signal
 import sys
-import os
 import time
 from typing import Dict, Optional
 
@@ -25,8 +66,6 @@ from telegram.ext import (
     MessageHandler,
     filters,
 )
-import threading
-from http.server import BaseHTTPRequestHandler, HTTPServer
 
 import config
 from chatgpt_client import ChatGPTClient, ChatGPTError, SessionExpiredError
@@ -248,35 +287,6 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         )
 
 
-class HealthCheckHandler(BaseHTTPRequestHandler):
-    def do_GET(self):
-        self.send_response(200)
-        self.send_header('Content-type', 'text/plain')
-        self.end_headers()
-        self.wfile.write(b"Bot is running!")
-
-def start_dummy_server_thread():
-    """Start a lightweight HTTP server in a background thread for Render."""
-    port_str = os.environ.get("PORT")
-    if not port_str:
-        logger.info("No PORT environment variable found. Skipping dummy web server (local mode).")
-        return
-        
-    port = int(port_str)
-    
-    def run_server():
-        try:
-            server = HTTPServer(('0.0.0.0', port), HealthCheckHandler)
-            logger.info(f"Dummy web server listening on port {port} for Render health checks.")
-            server.serve_forever()
-        except Exception as e:
-            logger.error(f"Failed to start dummy web server: {e}")
-
-    thread = threading.Thread(target=run_server, daemon=True)
-    thread.start()
-
-# ── Entrypoint ─────────────────────────────────────────────────────
-
 async def post_init(application) -> None:
     """Callback executed after the Application is initialised.
 
@@ -297,9 +307,6 @@ async def post_init(application) -> None:
 def main() -> None:
     """Build and run the Telegram bot application."""
     logger.info("Starting ChatGPT Telegram Bot…")
-    
-    # Start health check server FIRST so Render immediately detects the open port
-    start_dummy_server_thread()
 
     app = (
         ApplicationBuilder()
