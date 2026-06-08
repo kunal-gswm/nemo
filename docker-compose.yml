@@ -1,0 +1,12 @@
+services:
+  nemo-bot:
+    build: .
+    env_file: .env
+    restart: unless-stopped
+    volumes:
+      - session-data:/app/data
+    environment:
+      - SESSION_FILE=/app/data/session_data.json
+
+volumes:
+  session-data:
