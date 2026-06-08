@@ -33,7 +33,12 @@ def _require_env(key: str) -> str:
 # ── Required Settings ──────────────────────────────────────────────
 TELEGRAM_BOT_TOKEN: str = _require_env("TELEGRAM_BOT_TOKEN")
 OWNER_USER_ID: int = int(_require_env("OWNER_USER_ID"))
-CHATGPT_SESSION_TOKEN: str = _require_env("CHATGPT_SESSION_TOKEN")
+
+# Accept either session token or access token
+CHATGPT_SESSION_TOKEN: str = os.getenv("CHATGPT_SESSION_TOKEN") or os.getenv("CHATGPT_ACCESS_TOKEN")
+if not CHATGPT_SESSION_TOKEN:
+    print("[FATAL] Missing required environment variable: CHATGPT_SESSION_TOKEN or CHATGPT_ACCESS_TOKEN")
+    sys.exit(1)
 
 # ── Optional Settings (with defaults) ─────────────────────────────
 SESSION_FILE: str = os.getenv("SESSION_FILE", "session_data.json")
