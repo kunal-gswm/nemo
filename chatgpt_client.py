@@ -59,6 +59,7 @@ class ChatGPTClient:
         # Turnstile strongly blocks headless=new, so we must run visibly.
         options.add_argument("--window-size=1280,720")
         options.add_argument("--no-sandbox")
+        options.add_argument("--disable-dev-shm-usage")
         
         import platform
         if platform.system() == "Windows":
