@@ -253,14 +253,23 @@ async def handle_health_check(request):
 
 async def start_web_server():
     """Start a dummy aiohttp server to satisfy Render's port binding requirement."""
+    port_str = os.environ.get("PORT")
+    if not port_str:
+        logger.info("No PORT environment variable found. Skipping dummy web server (local mode).")
+        return
+        
     app = web.Application()
     app.router.add_get('/', handle_health_check)
     runner = web.AppRunner(app)
     await runner.setup()
-    port = int(os.environ.get("PORT", 8080))
-    site = web.TCPSite(runner, '0.0.0.0', port)
-    await site.start()
-    logger.info(f"Dummy web server listening on port {port} for Render health checks.")
+    port = int(port_str)
+    
+    try:
+        site = web.TCPSite(runner, '0.0.0.0', port)
+        await site.start()
+        logger.info(f"Dummy web server listening on port {port} for Render health checks.")
+    except OSError as e:
+        logger.warning(f"Could not bind to port {port} for dummy web server: {e}")
 
 
 # ── Entrypoint ─────────────────────────────────────────────────────
