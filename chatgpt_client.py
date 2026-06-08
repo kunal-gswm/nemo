@@ -60,6 +60,7 @@ class ChatGPTClient:
         options.add_argument("--window-size=1280,720")
         options.add_argument("--no-sandbox")
         options.add_argument("--disable-dev-shm-usage")
+        options.page_load_strategy = 'none'
         
         import platform
         if platform.system() == "Windows":
@@ -138,7 +139,17 @@ class ChatGPTClient:
             raise ChatGPTError("No session_token provided.")
             
         logger.info("Starting undetected-chromedriver...")
-        await asyncio.to_thread(self._sync_connect)
+        try:
+            await asyncio.wait_for(asyncio.to_thread(self._sync_connect), timeout=45)
+        except asyncio.TimeoutError:
+            logger.error("Selenium connection completely froze. Forcing timeout.")
+            # Try to grab a screenshot manually if possible
+            try:
+                if self._driver:
+                    self._driver.save_screenshot("error_screenshot.png")
+            except:
+                pass
+            raise ChatGPTError("ChatGPT loading froze completely. Screenshot saved.")
 
     def _sync_disconnect(self):
         if self._driver:
