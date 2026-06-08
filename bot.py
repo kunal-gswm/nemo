@@ -284,14 +284,14 @@ async def post_init(application) -> None:
     """
     global chatgpt_client
 
+    # Start the dummy web server IMMEDIATELY so Render detects the open port
+    await start_web_server()
+
     token = await load_token()
     
     chatgpt_client = ChatGPTClient(session_token=token)
     await chatgpt_client.connect()
     logger.info("ChatGPT client ready.")
-    
-    # Start the dummy web server for Render
-    await start_web_server()
 
 
 def main() -> None:
